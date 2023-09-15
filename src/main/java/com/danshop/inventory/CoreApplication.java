@@ -20,6 +20,7 @@ public class CoreApplication {
         try {
             SpringApplication
                     .run(CoreApplication.class, args);
+
         } catch (Throwable t) {
             t.printStackTrace();
         }
@@ -29,9 +30,8 @@ public class CoreApplication {
     ApplicationRunner applicationRunner(Environment environment) {
         String serviceName = environment.getProperty("spring.application.name");
 
-        return args -> {
-            MDC.put(MDC_APPLICATION_NAME, serviceName);
-        };
+        return args ->
+                MDC.put(MDC_APPLICATION_NAME, serviceName);
     }
 
     @Bean
