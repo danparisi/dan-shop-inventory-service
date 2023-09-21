@@ -192,4 +192,16 @@
         </plugins>
     </build>
 
+    <distributionManagement>
+        <snapshotRepository>
+            <id>nexus-server-snapshots</id>
+            <url>http://nexus-service-web-ui:8081/repository/maven-snapshots/</url>
+        </snapshotRepository>
+
+        <repository>
+            <id>nexus-server-releases</id>
+            <url>http://nexus-service-web-ui:8081/repository/maven-releases/</url>
+        </repository>
+    </distributionManagement>
+
 </project>
