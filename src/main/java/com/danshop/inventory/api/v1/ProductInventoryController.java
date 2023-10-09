@@ -1,13 +1,11 @@
 package com.danshop.inventory.api.v1;
 
 import com.danshop.inventory.service.ProductsInventoryService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Collection;
 
@@ -32,6 +30,23 @@ public class ProductInventoryController {
                 .find(code)
                 .map(ResponseEntity::ok)
                 .orElse(noContent().build());
+    }
+
+    @PutMapping("/{code}")
+    public ResponseEntity<ProductInventoryDTO> update(@PathVariable String code,
+                                                      @RequestBody @Valid UpdateProductInventoryDTO updateProductInventoryDTO) {
+        log.info("Updating product [{}] inventory", code);
+
+        return ok(productsInventoryService
+                .update(code, updateProductInventoryDTO));
+    }
+
+    @DeleteMapping("/{code}")
+    public ResponseEntity<Void> delete(@PathVariable String code) {
+        log.info("Deleting product [{}] inventory", code);
+
+        productsInventoryService.delete(code);
+        return ok().build();
     }
 
     @GetMapping

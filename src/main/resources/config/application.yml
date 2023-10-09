@@ -1,3 +1,14 @@
 spring:
   application:
     name: dan-shop-inventory-service
+  datasource:
+    url: jdbc:mariadb://mariadb:3306/dan_shop_inventory
+    username: root
+    password: LNqRhw5m1w
+  jpa:
+    generate-ddl: true
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MariaDBDialect
