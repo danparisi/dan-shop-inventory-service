@@ -1,5 +1,6 @@
 package com.danshop.inventory.service;
 
+import com.danshop.inventory.api.v1.CreateProductInventoryDTO;
 import com.danshop.inventory.api.v1.ProductInventoryDTO;
 import com.danshop.inventory.api.v1.ProductInventoryMapper;
 import com.danshop.inventory.api.v1.UpdateProductInventoryDTO;
@@ -34,30 +35,46 @@ public class ProductsInventoryService {
                 .collect(toSet());
     }
 
-    public ProductInventoryDTO update(@NotNull String code, @NotNull UpdateProductInventoryDTO updateProductInventoryDTO) {
-        final ProductInventoryEntity existingInventory = retrieveMandatoryByCode(code);
+    public ProductInventoryDTO add(@NotNull CreateProductInventoryDTO createProductInventoryDTO) {
+        ProductInventoryEntity newProductInventory = ProductInventoryEntity.builder().code(createProductInventoryDTO.getCode()).build();
+
+        createProductInventoryDTO
+                .getInnerQuantity()
+                .ifPresent(newProductInventory::setInnerQuantity);
+        createProductInventoryDTO
+                .getSupplierQuantity()
+                .ifPresent(newProductInventory::setSupplierQuantity);
+
+        return productInventoryMapper.map(
+                productInventoryRepository.save(newProductInventory));
+    }
+
+    public ProductInventoryDTO addOrUpdate(@NotNull String code, @NotNull UpdateProductInventoryDTO updateProductInventoryDTO) {
+        final ProductInventoryEntity productInventory = retrieveByCode(code)
+                .orElseGet(() -> ProductInventoryEntity.builder()
+                        .code(code).build());
 
         updateProductInventoryDTO
                 .getInnerQuantity()
-                .ifPresent(existingInventory::setInnerQuantity);
+                .ifPresent(productInventory::setInnerQuantity);
         updateProductInventoryDTO
                 .getSupplierQuantity()
-                .ifPresent(existingInventory::setSupplierQuantity);
+                .ifPresent(productInventory::setSupplierQuantity);
 
         return productInventoryMapper.map(
-                productInventoryRepository.save(existingInventory));
+                productInventoryRepository.save(productInventory));
     }
 
     public void delete(String code) {
-        productInventoryRepository
-                .findByCode(code)
-                .ifPresentOrElse(productInventoryRepository::delete,
-                        () -> new IllegalArgumentException(format("Expected Product Inventory with code [%s] not found", code)));
-    }
-
-    private ProductInventoryEntity retrieveMandatoryByCode(String code) {
-        return productInventoryRepository
+        ProductInventoryEntity productInventory = productInventoryRepository
                 .findByCode(code)
                 .orElseThrow(() -> new IllegalArgumentException(format("Expected Product Inventory with code [%s] not found", code)));
+
+        productInventoryRepository.delete(productInventory);
+    }
+
+    private Optional<ProductInventoryEntity> retrieveByCode(String code) {
+        return productInventoryRepository
+                .findByCode(code);
     }
 }

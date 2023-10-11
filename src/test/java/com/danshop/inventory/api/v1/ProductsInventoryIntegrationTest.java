@@ -3,7 +3,6 @@ package com.danshop.inventory.api.v1;
 import com.danshop.inventory.persistency.model.ProductInventoryEntity;
 import com.danshop.inventory.persistency.repository.ProductInventoryRepository;
 import lombok.SneakyThrows;
-import org.jeasy.random.EasyRandom;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,19 +27,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 import static org.springframework.http.HttpMethod.PUT;
-import static org.springframework.http.HttpStatus.*;
+import static org.springframework.http.HttpStatus.NO_CONTENT;
+import static org.springframework.http.HttpStatus.OK;
 
 @EmbeddedKafka
 @SpringBootTest(webEnvironment = RANDOM_PORT)
 class ProductsInventoryIntegrationTest {
-    private static final int AN_INNER_QUANTITY = 1;
-    public static final int A_SUPPLIER_QUANTITY = 5;
-    private static final String A_PRODUCT_CODE_123 = "123";
-    private static final String A_MISSING_CODE = "missing-code";
-    private static final String ENDPOINT_ALL_PRODUCTS_INVENTORY = BASE_ENDPOINT_PRODUCTS_INVENTORY;
-    private static final String ENDPOINT_PRODUCT_INVENTORY = BASE_ENDPOINT_PRODUCTS_INVENTORY + "/{code}";
     private static final Random RANDOM = new Random();
-    private static final EasyRandom EASY_RANDOM = new EasyRandom();
+    private static final String A_MISSING_CODE = "missing-code";
+    private static final String ENDPOINT_PRODUCT_INVENTORY = BASE_ENDPOINT_PRODUCTS_INVENTORY + "/{code}";
 
     @Autowired
     private TestRestTemplate testRestTemplate;
@@ -87,7 +82,7 @@ class ProductsInventoryIntegrationTest {
         ProductInventoryEntity productInventory3 = storeNewProductInventory();
 
         ResponseEntity<ProductInventoryDTO[]> response = testRestTemplate
-                .getForEntity(ENDPOINT_ALL_PRODUCTS_INVENTORY, ProductInventoryDTO[].class);
+                .getForEntity(BASE_ENDPOINT_PRODUCTS_INVENTORY, ProductInventoryDTO[].class);
 
         assertEquals(OK, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -100,11 +95,30 @@ class ProductsInventoryIntegrationTest {
 
     @Test
     @SneakyThrows
+    void shouldCreateProductInventory() {
+        CreateProductInventoryDTO createProductInventoryDTO = CreateProductInventoryDTO.builder()
+                .code(randomAlphabetic(10))
+                .innerQuantity(OptionalInt.of(RANDOM.nextInt(11, 20)))
+                .supplierQuantity(OptionalInt.of(RANDOM.nextInt(101, 200))).build();
+
+        ResponseEntity<ProductInventoryDTO> result = testRestTemplate
+                .postForEntity(BASE_ENDPOINT_PRODUCTS_INVENTORY, createProductInventoryDTO, ProductInventoryDTO.class);
+
+        assertEquals(OK, result.getStatusCode());
+        ProductInventoryDTO actual = result.getBody();
+        assertNotNull(actual);
+        assertEquals(createProductInventoryDTO.getCode(), actual.getCode());
+        assertEquals(createProductInventoryDTO.getInnerQuantity().orElse(0), actual.getInnerQuantity());
+        assertEquals(createProductInventoryDTO.getSupplierQuantity().orElse(0), actual.getSupplierQuantity());
+        verifyDatabaseProduct(createProductInventoryDTO);
+    }
+
+    @Test
+    @SneakyThrows
     void shouldUpdateProductInventory() {
         ProductInventoryEntity productInventory = storeNewProductInventory();
         String existingProductInventoryCode = productInventory.getCode();
         UpdateProductInventoryDTO updateProductInventoryDTO = UpdateProductInventoryDTO.builder()
-                .code(existingProductInventoryCode)
                 .innerQuantity(OptionalInt.of(RANDOM.nextInt(11, 20)))
                 .supplierQuantity(OptionalInt.of(RANDOM.nextInt(101, 200))).build();
 
@@ -114,7 +128,7 @@ class ProductsInventoryIntegrationTest {
         assertEquals(OK, result.getStatusCode());
         ProductInventoryDTO actual = result.getBody();
         assertNotNull(actual);
-        assertEquals(updateProductInventoryDTO.getCode(), actual.getCode());
+        assertEquals(existingProductInventoryCode, actual.getCode());
         assertEquals(updateProductInventoryDTO.getInnerQuantity().orElse(0), actual.getInnerQuantity());
         assertEquals(updateProductInventoryDTO.getSupplierQuantity().orElse(0), actual.getSupplierQuantity());
         verifyDatabaseProduct(updateProductInventoryDTO, existingProductInventoryCode);
@@ -122,15 +136,18 @@ class ProductsInventoryIntegrationTest {
 
     @Test
     @SneakyThrows
-    void shouldNotUpdateProductInventoryIfNotFound() {
+    void shouldUpdateProductInventoryIfNotFound() {
         String aNotExistingProductCode = randomAlphabetic(10);
-        UpdateProductInventoryDTO anUpdateProductInventoryDTO = UpdateProductInventoryDTO.builder()
-                .code(randomAlphabetic(10)).build();
+        UpdateProductInventoryDTO anUpdateProductInventoryDTO = UpdateProductInventoryDTO.builder().build();
 
         ResponseEntity<ProductInventoryDTO> result = testRestTemplate
                 .exchange(ENDPOINT_PRODUCT_INVENTORY, PUT, new HttpEntity<>(anUpdateProductInventoryDTO), ProductInventoryDTO.class, aNotExistingProductCode);
 
-        assertEquals(BAD_REQUEST, result.getStatusCode());
+        assertEquals(OK, result.getStatusCode());
+        ProductInventoryDTO actual = result.getBody();
+        assertNotNull(actual);
+        assertEquals(aNotExistingProductCode, actual.getCode());
+        verifyDatabaseProduct(anUpdateProductInventoryDTO, aNotExistingProductCode);
     }
 
     @Test
@@ -144,10 +161,19 @@ class ProductsInventoryIntegrationTest {
         assertEquals(empty(), productInventoryRepository.findByCode(existingProductInventoryCode));
     }
 
+    private void verifyDatabaseProduct(CreateProductInventoryDTO createProductInventoryDTO) {
+        String productInventoryCode = createProductInventoryDTO.getCode();
+        ProductInventoryEntity productInventoryEntity = retrieveMandatoryProductInventoryByCode(productInventoryCode);
+
+        assertEquals(productInventoryCode, productInventoryEntity.getCode());
+        assertEquals(createProductInventoryDTO.getInnerQuantity().orElse(0), productInventoryEntity.getInnerQuantity());
+        assertEquals(createProductInventoryDTO.getSupplierQuantity().orElse(0), productInventoryEntity.getSupplierQuantity());
+    }
+
     private void verifyDatabaseProduct(UpdateProductInventoryDTO updateProductInventoryDTO, String code) {
         ProductInventoryEntity productInventoryEntity = retrieveMandatoryProductInventoryByCode(code);
 
-        assertEquals(updateProductInventoryDTO.getCode(), productInventoryEntity.getCode());
+        assertEquals(code, productInventoryEntity.getCode());
         assertEquals(updateProductInventoryDTO.getInnerQuantity().orElse(0), productInventoryEntity.getInnerQuantity());
         assertEquals(updateProductInventoryDTO.getSupplierQuantity().orElse(0), productInventoryEntity.getSupplierQuantity());
     }

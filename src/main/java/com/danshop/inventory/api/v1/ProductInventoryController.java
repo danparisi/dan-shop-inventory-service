@@ -32,13 +32,29 @@ public class ProductInventoryController {
                 .orElse(noContent().build());
     }
 
+    @GetMapping
+    public ResponseEntity<Collection<ProductInventoryDTO>> getAll() {
+        log.info("Returning all products inventory");
+
+        return ok(productsInventoryService.findAll());
+    }
+
+    @PostMapping
+    public ResponseEntity<ProductInventoryDTO> add(@RequestBody @Valid CreateProductInventoryDTO createProductInventoryDTO) {
+        String productInventoryCode = createProductInventoryDTO.getCode();
+        log.info("Adding new product [{}] inventory", productInventoryCode);
+
+        return ok(productsInventoryService
+                .add(createProductInventoryDTO));
+    }
+
     @PutMapping("/{code}")
     public ResponseEntity<ProductInventoryDTO> update(@PathVariable String code,
                                                       @RequestBody @Valid UpdateProductInventoryDTO updateProductInventoryDTO) {
         log.info("Updating product [{}] inventory", code);
 
         return ok(productsInventoryService
-                .update(code, updateProductInventoryDTO));
+                .addOrUpdate(code, updateProductInventoryDTO));
     }
 
     @DeleteMapping("/{code}")
@@ -47,13 +63,6 @@ public class ProductInventoryController {
 
         productsInventoryService.delete(code);
         return ok().build();
-    }
-
-    @GetMapping
-    public ResponseEntity<Collection<ProductInventoryDTO>> getAll() {
-        log.info("Returning all products inventory");
-
-        return ok(productsInventoryService.findAll());
     }
 
 }

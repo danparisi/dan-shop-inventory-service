@@ -3,15 +3,15 @@ package com.danshop.inventory.api.v1;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import jakarta.validation.constraints.NotEmpty;
 import lombok.Builder;
-import lombok.Builder.Default;
 import lombok.Data;
 
 import java.util.OptionalInt;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 import static com.fasterxml.jackson.databind.PropertyNamingStrategies.SnakeCaseStrategy;
-import static java.util.OptionalInt.empty;
+import static lombok.Builder.Default;
 
 @Data
 @Builder
@@ -19,11 +19,13 @@ import static java.util.OptionalInt.empty;
 @JsonNaming(SnakeCaseStrategy.class)
 @JsonIgnoreProperties(ignoreUnknown = true)
 @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
-public class UpdateProductInventoryDTO {
+public class CreateProductInventoryDTO {
+    @NotEmpty
+    private String code;
 
     @Default
-    private OptionalInt innerQuantity = empty();
+    private OptionalInt innerQuantity;
     @Default
-    private OptionalInt supplierQuantity = empty();
+    private OptionalInt supplierQuantity;
 
 }
